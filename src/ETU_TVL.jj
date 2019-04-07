@@ -1,0 +1,489 @@
+PARSER_BEGIN(ETU_TVL)
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class ETU_TVL {
+    public static final int INTEGER_TRUE = 2;
+    public static final int INTEGER_FALSE = 1;
+    public static final int INTEGER_UNKNOWN = 0;
+
+    private static List<Node> declaredVariablesList;
+
+
+
+    public static void main(String args[]) {
+       declaredVariablesList = new ArrayList<Node>();
+
+       ETU_TVL parser;
+
+       if (args.length == 1) {
+         try {
+           parser = new ETU_TVL(new java.io.FileInputStream(args[0]));
+         }
+         catch (java.io.FileNotFoundException e) {
+           return;
+         }
+       }
+       else {
+         System.out.println("Please enter a file as a parameter. e.g. \"java ETU_TVL file\"");
+
+         return;
+       }
+
+       try {
+         parser.ETU_TVL_Language();
+       }
+       catch (ParseException e) {
+         System.out.println(e.getMessage());
+       }
+    }
+    public static void addDeclaredVariable(String name) {
+        declaredVariablesList.add(new Node(name));
+    }
+    public static boolean containsDeclaredVariable(String name) {
+        for(Node node: declaredVariablesList)
+            if(name.equals(node.getName()))
+                return true;
+
+        return false;
+    }
+    public static void setValue(String name, int value) {
+        for(Node node: declaredVariablesList) {
+            if(name.equals(node.getName())) {
+                node.setValue(value);
+
+                return;
+            }
+        }
+    }
+    public static int getValue(String name) {
+        for(Node node: declaredVariablesList) {
+            if(name.equals(node.getName())) {
+                return node.getValue();
+            }
+        }
+
+        return 0;
+    }
+    public static String getValueAsString(int value) {
+        if (value==INTEGER_TRUE)
+            return "TRUE";
+        else if (value==INTEGER_FALSE)
+            return "FALSE";
+        else
+            return "UNKNOWN";
+    }
+
+}
+/********************          THIS CLASS IS USED TO HOLD DECLARED VARIABLES AND THEIR VALUES        ********************/
+class Node {
+    private String name;
+    private int value;
+    /*
+       if "value" equals;
+       2 = TRUE
+       1 = FALSE
+       0 = UNKNOWN
+    */
+
+
+
+    public Node(String nameP) {
+        this.name = nameP;
+        this.value = ETU_TVL.INTEGER_UNKNOWN;
+    }
+
+    public String getName() {
+        return name;
+    }
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+}
+
+PARSER_END(ETU_TVL)
+
+
+
+
+
+/*************************************************************************************/
+/******************************         COMMENT         ******************************/
+/*************************************************************************************/
+MORE :
+{
+  "--" : IN_SINGLE_LINE_COMMENT
+}
+
+<IN_SINGLE_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+  <SINGLE_LINE_COMMENT: "\n" | "\r" | "\r\n" > : DEFAULT
+}
+
+<IN_SINGLE_LINE_COMMENT>
+MORE :
+{
+  < ~[] >
+}
+
+
+
+/*************************************************************************************/
+/********************          TOKENS ARE DEFINED IN HERE         ********************/
+/*************************************************************************************/
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+}
+
+TOKEN :
+{
+  < PROGRAM: "PROGRAM" >
+| < DECLARATION_SECTION: "DECLARATION SECTION" >
+| < INITIALIZATION_SECTION: "INITIALIZATION SECTION" >
+| < MAIN_SECTION: "MAIN SECTION" >
+| < INPUT: "INPUT" >
+| < OUTPUT: "OUTPUT" >
+| < TRUE: "TRUE" >
+| < FALSE: "FALSE" >
+| < UNKNOWN: "UNKNOWN" >
+| < AND: "AND" >
+| < NOT: "NOT" >
+| < OR: "OR" >
+
+| < LEFT_PARENTHESIS: "(" >
+| < RIGHT_PARENTHESIS: ")" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < EQUALS: "=" >
+
+| < MESSAGE: "'"
+            (   (~["\"","\\","\n","\r"])
+             | ("\\" ( ["n","t","b","r","f","\\","'","\""]
+                      | ["0"-"7"] ( ["0"-"7"] )?
+             | ["0"-"3"] ["0"-"7"] ["0"-"7"]))
+            )*
+            "'">
+
+| < ID: ["a"-"z","A"-"Z"] ( ["a"-"z","A"-"Z", "0"-"9"] )* >
+}
+
+
+
+/*************************************************************************************/
+/********************           GRAMMAR STARTS FROM HERE          ********************/
+/*************************************************************************************/
+
+
+
+/********************    <ETU TVL Language>  ********************/
+void ETU_TVL_Language() : {}
+{
+  <PROGRAM> <ID> <SEMICOLON> DeclarationSection() InitializationSection() MainSection()
+}
+
+
+
+/********************    <Declaration Section>   ********************/
+void DeclarationSection() : {}
+{
+  <DECLARATION_SECTION> [ VariableNameList() ] <SEMICOLON>
+}
+
+/********************    <Variable Name List>    ********************/
+void VariableNameList() : {
+    String name;
+}
+{
+  name = VariableName()
+  {
+    ETU_TVL.addDeclaredVariable(name);
+  }
+  (<COMMA> name = VariableName()
+  {
+    if(ETU_TVL.containsDeclaredVariable(name)) {
+        throw new ParseException("\nEXCEPTION: You can't declare variables which have same names: \""+ name +"\"\n");
+    }
+
+    ETU_TVL.addDeclaredVariable(name);
+  }
+  )*
+}
+
+/*****    <Variable Name>  *****/
+String VariableName() : {
+    Token token;
+}
+{
+  token = <ID>
+  {
+    return token.toString();
+  }
+}
+
+
+
+
+
+/********************    <Initialization Section>  ********************/
+void InitializationSection() : {}
+{
+  <INITIALIZATION_SECTION> ( InitList() <SEMICOLON> )*
+}
+
+/********************    <Init List>  ********************/
+void InitList() : {
+    String name;
+    int value;
+}
+{
+  name = VariableName() <EQUALS> value = LogicalValue()
+  {
+    if(!ETU_TVL.containsDeclaredVariable(name)) {
+        throw new ParseException("\nEXCEPTION: Use of undeclared variable in the initialization section: \""+ name +"\"\n");
+    }
+
+    ETU_TVL.setValue(name, value);
+  }
+}
+
+/********************    <Logical Value>  ********************/
+int LogicalValue() : {}
+{
+  <TRUE>
+  {
+    return ETU_TVL.INTEGER_TRUE;
+  }
+| <FALSE>
+  {
+    return ETU_TVL.INTEGER_FALSE;
+  }
+| <UNKNOWN>
+  {
+    return ETU_TVL.INTEGER_UNKNOWN;
+  }
+}
+
+
+
+
+
+/********************    <Main Section>  ********************/
+void MainSection() : {}
+{
+  <MAIN_SECTION> ( Statement() <SEMICOLON> )*
+}
+
+/********************    <Statement>  ********************/
+void Statement() : {}
+{
+  InputStmt()
+|
+  OutputStmt()
+|
+  BoolAssignmentStmt()
+}
+
+/********************    <Input Stmt>  ********************/
+void InputStmt() : {
+    String message;
+    String name;
+}
+{
+  <INPUT> message = message()
+  {
+    System.out.print(message);
+  }
+  name = VariableName()
+  {
+    if(!ETU_TVL.containsDeclaredVariable(name)) {
+        throw new ParseException("\nEXCEPTION: Use of undeclared variable in the main section: \""+ name +"\"\n");
+    }
+
+    System.out.println(ETU_TVL.getValueAsString(ETU_TVL.getValue(name)));
+  }
+}
+
+/********************    <Output Stmt>  ********************/
+void OutputStmt() : {
+    String message;
+    int result;
+}
+{
+  <OUTPUT> message = message()
+  {
+    System.out.print(message);
+  }
+  result = BoolExpression()
+  {
+    System.out.println(ETU_TVL.getValueAsString(result));
+  }
+}
+
+/********************    <MESSAGE>  ********************/
+String message() : {
+    Token token;
+}
+{
+  token = <MESSAGE>
+  {
+    return token.toString().replace("'", "");;
+  }
+}
+
+/********************    <Bool Assignment Stmt>  ********************/
+void BoolAssignmentStmt() : {
+    String name;
+    int result;
+}
+{
+  name = VariableName() <EQUALS> result = BoolExpression()
+  {
+    if(!ETU_TVL.containsDeclaredVariable(name)) {
+        throw new ParseException("EXCEPTION: Use of undeclared variable in the main section: \""+ name +"\"");
+    }
+
+    ETU_TVL.setValue(name, result);
+  }
+}
+
+
+
+/********************    <Bool Expression>  ********************/
+int BoolExpression() : {
+    int parameter;
+    int result;
+}
+{
+  parameter = BoolTerm() result = BoolExpressionHelper(parameter)
+  {
+    return result;
+  }
+}
+
+/********************    IT IS HELPER PRODUCT TO SOLVE LEFT RECURSION    ********************/
+int BoolExpressionHelper(int parameter) : {
+    int temp;
+    int result;
+    int returnValue;
+}
+{
+  <OR> temp = BoolTerm()
+  {
+    if(parameter==ETU_TVL.INTEGER_TRUE || temp==ETU_TVL.INTEGER_TRUE)
+        result = ETU_TVL.INTEGER_TRUE;
+    else if(parameter==ETU_TVL.INTEGER_FALSE && temp==ETU_TVL.INTEGER_FALSE)
+        result = ETU_TVL.INTEGER_FALSE;
+    else
+        result = ETU_TVL.INTEGER_UNKNOWN;
+  }
+  returnValue = BoolExpressionHelper(result)
+  {
+    return returnValue;
+  }
+| EPSILON()
+  {
+    return parameter;
+  }
+}
+
+
+
+/********************    <Bool Term>  ********************/
+int BoolTerm() : {
+    int parameter;
+    int result;
+}
+{
+  parameter = BoolFactor() result = BoolTermHelper(parameter)
+  {
+    return result;
+  }
+}
+
+/********************    IT IS HELPER PRODUCT TO SOLVE LEFT RECURSION    ********************/
+int BoolTermHelper(int parameter) : {
+    int temp;
+    int result;
+    int returnValue;
+}
+{
+  <AND> temp = BoolFactor()
+  {
+    if(parameter==ETU_TVL.INTEGER_TRUE && temp==ETU_TVL.INTEGER_TRUE)
+        result = ETU_TVL.INTEGER_TRUE;
+    else if(parameter==ETU_TVL.INTEGER_FALSE || temp==ETU_TVL.INTEGER_FALSE)
+        result = ETU_TVL.INTEGER_FALSE;
+    else
+        result = ETU_TVL.INTEGER_UNKNOWN;
+  }
+  returnValue = BoolTermHelper(result)
+  {
+    return returnValue;
+  }
+| EPSILON()
+  {
+    return parameter;
+  }
+}
+
+
+
+/********************    <Bool Factor>  ********************/
+int BoolFactor() : {
+    int value;
+}
+{
+  value = BoolPrimary()
+  {
+    return value;
+  }
+| <NOT> value = BoolPrimary()
+  {
+    if(value == ETU_TVL.INTEGER_TRUE)
+        return ETU_TVL.INTEGER_FALSE;
+    else if(value == ETU_TVL.INTEGER_FALSE)
+        return ETU_TVL.INTEGER_TRUE;
+    else
+        return ETU_TVL.INTEGER_UNKNOWN;
+  }
+}
+
+/********************    <Bool Primary>  ********************/
+int BoolPrimary() : {
+    String name;
+    int result;
+}
+{
+  result = LogicalValue()
+  {
+    return result;
+  }
+| name = VariableName() {
+    return ETU_TVL.getValue(name);
+  }
+| <LEFT_PARENTHESIS> result = BoolExpression() <RIGHT_PARENTHESIS>
+  {
+    return result;
+  }
+}
+
+
+
+/********************    IT IS USED AS AN EPSILON  ********************/
+void EPSILON() : {}
+{
+  {
+    System.out.print("");
+  }
+}

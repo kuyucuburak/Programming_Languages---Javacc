@@ -1,0 +1,33 @@
+---------------------------------------------------------------------------------------------------------
+-----                   This is my example program.                                               -------
+---------------------------------------------------------------------------------------------------------
+
+PROGRAM xorxnor;
+
+DECLARATION SECTION
+-- Declare variables
+P, Q, R, result1, result2, result3, result4, result5, result6;
+
+INITIALIZATION SECTION
+-- Initialize the variables
+P=UNKNOWN;
+Q=TRUE;
+R=FALSE;
+
+MAIN SECTION
+-- Compute the XOR of P and Q
+INPUT 'Enter P:' P;
+INPUT 'Enter Q:' Q;
+INPUT 'Enter R:' R;
+result1 = P AND Q;
+result2 = NOT P AND NOT Q;
+result3 = P AND Q OR NOT P AND NOT Q;
+result4 = Q OR R;
+result5 = P OR NOT R;
+result6 = NOT Q OR NOT P;
+OUTPUT 'P AND Q:  ' result1;
+OUTPUT 'NOT P AND NOT Q:  ' result2;
+OUTPUT 'P AND Q OR NOT P AND NOT Q:  ' result3;
+OUTPUT 'Q OR R:  ' result4;
+OUTPUT 'P OR NOT R:  ' result5;
+OUTPUT 'NOT Q OR NOT P:  ' result6;

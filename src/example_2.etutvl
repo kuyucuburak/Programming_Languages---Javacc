@@ -1,0 +1,28 @@
+PROGRAM xorxnor;
+
+DECLARATION SECTION
+-- Declare variables
+P, Q, R;
+
+
+
+---------------------------------------------------------------------------------------------------------
+-----   An parseException will be occurred because of a problem in the INITIALIZATION SECTION.     -------
+-----   The problem is use of undeclared variable in INITIALIZATION section: "T"                  -------
+---------------------------------------------------------------------------------------------------------
+INITIALIZATION SECTION
+-- Initialize the variables
+Q=TRUE;
+P=UNKNOWN;
+R=FALSE;
+T=FALSE;
+
+
+
+MAIN SECTION
+-- Compute the XOR of P and Q
+INPUT 'Enter P:' P;
+INPUT 'Enter Q:' Q;
+R = NOT (P AND Q OR NOT P AND NOT Q);
+OUTPUT 'P XOR Q is:' R;
+OUTPUT 'P XNOR Q is:' ((P AND Q) OR (NOT P AND NOT Q));
